@@ -1,0 +1,95 @@
+IT-DEUTSCHLAND PANEL — FERTIGES IIS-PAKET
+========================================
+
+Voraussetzungen
+--------------
+IIS mit PHP 8.2 oder neuer über FastCGI und den PHP-Erweiterungen
+pdo_mysql, mbstring und session; MySQL 8.0+ oder MariaDB 10.4+.
+PHP muss bereits im IIS als Handler für *.php eingerichtet sein.
+Kein Composer, Node, Framework, Build, PowerShell oder URL-Rewrite nötig.
+Bootstrap und alle JavaScript-/CSS-Dateien liegen lokal bei; kein CDN.
+
+Installation
+------------
+1. Den kompletten Ordner in das IIS-Website-Verzeichnis kopieren.
+2. Eine leere Datenbank mit utf8mb4 anlegen und database/schema.sql
+   z.B. mit phpMyAdmin oder einem MySQL-Client in diese Datenbank importieren.
+   Das Schema enthält keine persönlichen Daten oder Standardzugänge.
+3. In config.php unter database Host, Port, Datenbankname, Benutzer
+   und Passwort eintragen. Einen eigenen DB-Benutzer nur für diese
+   Datenbank nutzen (SELECT, INSERT, UPDATE, DELETE reichen im Betrieb).
+4. In config.php registration_key auf einen eigenen, zufälligen,
+   mindestens 32 Zeichen langen Einrichtungsschlüssel setzen.
+   Dies verhindert, dass Besucher den ersten Admin-Zugang übernehmen.
+5. HTTPS im IIS einrichten, Website öffnen und „Admin einrichten“ wählen.
+   Den Einrichtungsschlüssel sowie eigene Zugangsdaten eingeben.
+   Das Passwort muss 12 bis 72 Bytes lang sein.
+6. Nach der ersten Registrierung registration_key wieder leeren.
+   Es kann technisch nur einen Admin geben; die Registrierung wird
+   automatisch gesperrt, sobald dieser existiert.
+
+Die Anwendung funktioniert im Website-Stamm oder in einem Unterordner.
+Die App benötigt keine Schreibrechte im Website-Verzeichnis.
+Das PHP-Sitzungsverzeichnis muss für die IIS-App-Pool-Identität
+beschreibbar und außerhalb des öffentlich erreichbaren Ordners liegen.
+Den Website-Dateien nur Leserechte geben; Änderungen am config.php
+nur Administratoren erlauben. PHP display_errors im Produktivsystem
+deaktivieren, log_errors aktivieren und PHP-Logs nicht öffentlich ablegen.
+
+Sicherheit und Betrieb
+---------------------
+web.config sperrt app/, database/, config.php, INSTALL.txt und .git.
+IIS Request Filtering muss installiert sein; nach dem Upload prüfen,
+dass /database/schema.sql und /config.php mit HTTP 404 abgewiesen werden.
+Keine Sicherungskopien wie config.php.bak im Webverzeichnis ablegen.
+Nur HTTPS produktiv verwenden, damit Sitzungscookies sicher übertragen werden.
+Bei Reverse-Proxys TLS bis zum IIS verwenden, damit HTTPS erkannt wird.
+Sitzungen enden nach 30 Minuten Inaktivität. Maximal zehn Anmeldeversuche
+pro IP innerhalb von 15 Minuten; dies gilt auch für die Ersteinrichtung.
+Systemzeit des PHP-/Datenbankservers korrekt konfigurieren.
+Regelmäßige verschlüsselte Datenbank-Backups außerhalb des Webroots
+einrichten und Wiederherstellung testen. Der CSV-Export ersetzt kein Backup.
+Personenbezogene Kundendaten nur mit Rechtsgrundlage speichern; Zugriff
+und Aufbewahrungsfristen eigenverantwortlich festlegen. Nicht mehr benötigte
+Daten und gegebenenfalls Backups nach dem eigenen Löschkonzept entfernen.
+
+Funktionen
+----------
+- Kunden: Name, Firma, E-Mail, Telefon, Adresse und interne Notizen
+- Projekte: Auftrag, Kunde, drei frei benennbare Prioritäten, Status,
+  Fortschritt, Termin und vereinbarter Gesamtpreis
+- Beliebig viele datierte Abschlagszahlungen pro Projekt, Restbetrag
+  und separat ausgewiesenes Guthaben bei Überzahlung
+- Produkte/Dienstleistungen mit Preis, Einheit, Kategorie und Beschreibung
+- Produktpositionen als Preis-Snapshot zum Projekt übernehmen;
+  Katalogänderungen ändern keine bestehenden Positionen
+- Aufgaben mit Projektbezug, Termin und Erledigt-Status
+- Einnahmenstatistik über 12 Monate, Ausgaben, Saldo und Zahlungs-CSV
+- Admin-Profil und Passwort ändern; lokale Suche und mobiles Menü
+
+Preis- und Statistikregeln
+-------------------------
+Alle Preise sind EUR-Beträge ohne automatische Umsatzsteuerberechnung.
+Der Projekt-Gesamtpreis wird ausdrücklich manuell vereinbart.
+Produktpositionen sind eine Kalkulationshilfe und ändern ihn NICHT automatisch.
+Einnahmen beruhen auf erfassten Zahlungen und deren Zahlungsdatum,
+nicht auf Projektbudgets. Zukunftsdatierte Zahlungen/Ausgaben werden erst
+ab ihrem jeweiligen Datum in Ist-Kennzahlen berücksichtigt; im Journal
+sind sie bereits sichtbar. „Saldo“ bedeutet Einnahmen minus erfasste
+Ausgaben, nicht steuerrechtlicher Gewinn. Keine Rechnungs-, Buchhaltungs-
+oder Steuerberatungslösung und keine GoBD-Zertifizierung.
+Projekte mit Zahlungen können nicht versehentlich gelöscht werden:
+Zuerst einzelne Zahlungen ausdrücklich löschen. Kunden mit Projekten
+bleiben ebenfalls vor Löschung geschützt. Aufgaben bleiben beim
+Löschen eines Projekts ohne Projektzuordnung erhalten.
+
+Fehlerhilfe
+----------
+„Datenbank nicht erreichbar“: Zugangsdaten, pdo_mysql, DB-Erreichbarkeit
+und importiertes Schema prüfen. Details stehen nur im PHP-Serverlog.
+IIS 500.19: Request Filtering und Zugriffsrechte auf web.config prüfen.
+Leere Seite/Download von PHP: FastCGI-/PHP-Handler im IIS korrekt einrichten.
+Nach Installation: Admin anlegen, Testkunden und Projekt speichern,
+Zahlung erfassen und Statistiken prüfen; Testdaten danach löschen.
+
+Bootstrap 5.3.8: MIT-Lizenz, siehe assets/vendor/bootstrap-LICENSE.
