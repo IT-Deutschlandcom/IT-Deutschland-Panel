@@ -34,25 +34,35 @@ if (!$installed && $error === '' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     } else {
         try {
             $pdo->beginTransaction();
+            $pdo->exec(
+                "INSERT IGNORE INTO settings (setting_key, setting_value, updated_at)
+                 VALUES ('installer_lock', NULL, UTC_TIMESTAMP())"
+            );
+            $pdo->query("SELECT setting_key FROM settings WHERE setting_key = 'installer_lock' FOR UPDATE");
             $roleId = $pdo->query("SELECT id FROM roles WHERE name = 'superadministrator'")->fetchColumn();
             if (!$roleId) {
                 throw new RuntimeException('Die Rollen fehlen. Importieren Sie database.sql erneut.');
             }
-
-            $statement = $pdo->prepare(
-                'INSERT INTO admins (role_id, name, email, password_hash, created_at)
-                 VALUES (:role_id, :name, :email, :password_hash, UTC_TIMESTAMP())'
-            );
-            $statement->execute([
-                'role_id' => $roleId,
-                'name' => $name,
-                'email' => strtolower($email),
-                'password_hash' => password_hash($password, PASSWORD_DEFAULT),
-            ]);
-            $pdo->commit();
-            session_regenerate_id(true);
-            $_SESSION = [];
-            $installed = true;
+            $adminCount = (int) $pdo->query('SELECT COUNT(*) FROM admins')->fetchColumn();
+            if ($adminCount > 0) {
+                $pdo->rollBack();
+                $installed = true;
+            } else {
+                $statement = $pdo->prepare(
+                    'INSERT INTO admins (role_id, name, email, password_hash, created_at)
+                     VALUES (:role_id, :name, :email, :password_hash, UTC_TIMESTAMP())'
+                );
+                $statement->execute([
+                    'role_id' => $roleId,
+                    'name' => $name,
+                    'email' => strtolower($email),
+                    'password_hash' => password_hash($password, PASSWORD_DEFAULT),
+                ]);
+                $pdo->commit();
+                session_regenerate_id(true);
+                $_SESSION = [];
+                $installed = true;
+            }
         } catch (Throwable $exception) {
             if ($pdo->inTransaction()) {
                 $pdo->rollBack();
